@@ -2,7 +2,7 @@
 
 **Currently maintained by [ayunami2000](https://github.com/ayunami2000)**
 
-### Client: [https://g.deev.is/eaglercraft/](https://g.deev.is/eaglercraft/)
+### Minecraft Unblocked: [https://superteamxp.github.io/Minecraft-Unblocked/javascript](https://superteamxp.github.io/Minecraft-Unblocked/javascript)
 
 ### Offline Download: [Offline_Download_Version.html](https://github.com/lax1dude/eaglercraft/raw/main/stable-download/Offline_Download_Version.html)
 
@@ -36,7 +36,7 @@ Eaglercraft is real Minecraft 1.5.2 that you can play in any regular web browser
 
 The worlds are stored in your browser's local storage, **you can export them as EPK files and import them again on all other Eaglercraft sites that also support singleplayer.** You can even copy an exported world to an entirely different computer, or send it to a friend, and import it and continue playing with all your progress saved.
 
-**Link: [https://g.deev.is/eaglercraft/](https://g.deev.is/eaglercraft/)**
+**Link: [https://superteamxp.github.io/Minecraft-Unblocked/javascript](https://superteamxp.github.io/Minecraft-Unblocked/javascript)**
 
 ## LAN Worlds?
 
