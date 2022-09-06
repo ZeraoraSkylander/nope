@@ -62,6 +62,7 @@ import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
@@ -358,6 +359,9 @@ public class EaglerAdapterImpl2 {
 
 	public static final void _wglBlendFunc(int p1, int p2) {
 		GL11.glBlendFunc(p1, p2);
+	}
+	public static final void _wglBlendColor(float r, float g, float b, float a) {
+		GL14.glBlendColor(r, g, b, a);
 	}
 	public static final void _wglDepthMask(boolean p1) {
 		GL11.glDepthMask(p1);
@@ -1283,8 +1287,14 @@ public class EaglerAdapterImpl2 {
 	public static final void setMasterVolume(float v) {
 		ss.setMasterVolume(v);
 	}
+	public static final void setMusicVolume(float v) {
+		// used in browser
+	}
 	private static int playbackId = 0;
 	public static final int beginPlayback(String fileName, float x, float y, float z, float volume, float pitch) {
+		return beginPlayback(fileName, x, y, z, volume, pitch, false);
+	}
+	public static final int beginPlayback(String fileName, float x, float y, float z, float volume, float pitch, boolean ayunamiAddedThisBoolean) {
 		int id = ++playbackId;
 		URL loc = null;
 		if((loc = getResourceURL(fileName)) != null) {
@@ -1304,6 +1314,9 @@ public class EaglerAdapterImpl2 {
 		return id;
 	}
 	public static final int beginPlaybackStatic(String fileName, float volume, float pitch) {
+		return beginPlaybackStatic(fileName, volume, pitch, false);
+	}
+	public static final int beginPlaybackStatic(String fileName, float volume, float pitch, boolean ayunamiAddedThisBoolean) {
 		int id = ++playbackId;
 		URL loc = null;
 		if((loc = getResourceURL(fileName)) != null) {
@@ -1356,6 +1369,9 @@ public class EaglerAdapterImpl2 {
 	}
 	public static final boolean isPlaying(int id) {
 		return ss.playing("sound_"+id);
+	}
+	public static final void fireTitleMusicEvent(boolean b, float f) {
+		// used in browser
 	}
 	public static final void openConsole() {
 		EventQueue.invokeLater(new Runnable() {
@@ -1929,7 +1945,7 @@ public class EaglerAdapterImpl2 {
 	}
 	
 	public static final void serverLANCloseServer() {
-		throw new UnsupportedOperationException("LAN worlds are not available in LWJGL eagleradapter");
+		
 	}
 
 	public static final LANPeerEvent serverLANGetEvent(String clientId) {
@@ -1962,6 +1978,10 @@ public class EaglerAdapterImpl2 {
 	
 	public static final boolean anisotropicFilteringSupported() {
 		return true;
+	}
+	
+	public static final byte[] downloadURL(String url) {
+		return null;
 	}
 	
 }
