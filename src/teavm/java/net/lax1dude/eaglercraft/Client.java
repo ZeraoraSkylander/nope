@@ -1,16 +1,21 @@
 package net.lax1dude.eaglercraft;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import static org.teavm.jso.webgl.WebGLRenderingContext.*;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.teavm.jso.JSBody;
+import org.teavm.jso.JSExceptions;
+import org.teavm.jso.JSFunctor;
+import org.teavm.jso.JSObject;
 import org.teavm.jso.browser.Window;
 import org.teavm.jso.core.JSError;
+import org.teavm.jso.dom.html.HTMLCanvasElement;
 import org.teavm.jso.dom.html.HTMLDocument;
 import org.teavm.jso.dom.html.HTMLElement;
+import org.teavm.jso.webgl.WebGLRenderingContext;
 
+import net.lax1dude.eaglercraft.adapter.DetectAnisotropicGlitch;
 import net.lax1dude.eaglercraft.adapter.EaglerAdapterImpl2;
 import net.minecraft.client.Minecraft;
 import net.minecraft.src.ServerList;
@@ -65,23 +70,23 @@ public class Client {
 		}
 		String serverWorkerURI = conf.optString("serverWorkerURI", null);
 		EaglerAdapterImpl2.setWorldDatabaseName(conf.optString("worldsFolder", "MAIN"));
+		
+		registerErrorHandler();
 
 		try {
+			
 			EaglerAdapterImpl2.initializeContext(rootElement, assetsURI, serverWorkerURI);
+
+			ServerList.loadDefaultServers(conf);
+			AssetRepository.loadOverrides(conf);
+			LocalStorageManager.loadStorage();
+	
+			run0();
+			
 		}catch(Throwable t) {
-			StringWriter s = new StringWriter();
-			t.printStackTrace(new PrintWriter(s));
-			showCrashScreen(s.toString());
+			showCrashScreen(t.toString() + "\n\n" + getStackTrace(t));
 			return;
 		}
-
-		registerErrorHandler();
-		ServerList.loadDefaultServers(conf);
-		AssetRepository.loadOverrides(conf);
-		LocalStorageManager.loadStorage();
-
-		run0();
-
 	}
 
 	private static void oldMain() {
@@ -95,23 +100,37 @@ public class Client {
 			crashScreenOptsDump += "\"" + sh + "\"";
 		}
 		crashScreenOptsDump += " ]";
+		
+		registerErrorHandler();
+		
 		try {
+			
 			EaglerAdapterImpl2.initializeContext(rootElement = Window.current().getDocument().getElementById(e[0]), e[1], "worker_bootstrap.js");
+			
+			LocalStorageManager.loadStorage();
+			if(e.length > 2 && e[2].length() > 0) {
+				ServerList.loadDefaultServers(e[2]);
+			}
+			if(e.length > 3) {
+				EaglerAdapterImpl2.setServerToJoinOnLaunch(e[3]);
+			}
+			
+			run0();
+			
 		}catch(Throwable t) {
-			StringWriter s = new StringWriter();
-			t.printStackTrace(new PrintWriter(s));
-			showCrashScreen(s.toString());
+			showCrashScreen(t.toString() + "\n\n" + getStackTrace(t));
 			return;
 		}
-		registerErrorHandler();
-		LocalStorageManager.loadStorage();
-		if(e.length > 2 && e[2].length() > 0) {
-			ServerList.loadDefaultServers(e[2]);
+	}
+	
+	private static String getStackTrace(Throwable t) {
+		JSObject obj = JSExceptions.getJSException(t);
+		if(obj != null) {
+			JSError err = (JSError)obj;
+			return err.getStack() == null ? "[no stack trace]" : err.getStack();
+		}else {
+			return "[no stack trace]";
 		}
-		if(e.length > 3) {
-			EaglerAdapterImpl2.setServerToJoinOnLaunch(e[3]);
-		}
-		run0();
 	}
 
 	private static void run0() {
@@ -126,28 +145,50 @@ public class Client {
 
 	@JSBody(params = { }, script = "return window.minecraftOpts;")
 	public static native String[] getOpts();
+	
+	public static void registerErrorHandler() {
+		setWindowErrorHandler(new WindowErrorHandler() {
 
-	@JSBody(params = { }, script = "window.minecraftError = null; window.onerror = function(message, file, line, column, errorObj) { if(errorObj) { window.minecraftError = errorObj; window.minecraftErrorL = \"\"+line+\":\"+column; javaMethods.get(\"net.lax1dude.eaglercraft.Client.handleNativeError()V\").invoke(); } else { alert(\"a native browser exception was thrown but your browser does not support fith argument in onerror\"); } };")
-	public static native void registerErrorHandler();
-
-	@JSBody(params = { }, script = "return window.minecraftError;")
-	public static native JSError getWindowError();
-
-	@JSBody(params = { }, script = "return window.minecraftErrorL;")
-	public static native String getWindowErrorL();
-
-	public static void handleNativeError() {
-		JSError e = getWindowError();
-		StringBuilder str = new StringBuilder();
-		str.append("Native Browser Exception\n");
-		str.append("----------------------------------\n");
-		str.append("  Line: ").append(getWindowErrorL()).append('\n');
-		str.append("  Type: ").append(e.getName()).append('\n');
-		str.append("  Message: ").append(e.getMessage()).append('\n');
-		str.append("----------------------------------\n\n");
-		str.append(e.getStack()).append('\n');
-		showCrashScreen(str.toString());
+			@Override
+			public void call(String message, String file, int line, int col, JSError error) {
+				StringBuilder str = new StringBuilder();
+				
+				str.append("Native Browser Exception\n");
+				str.append("----------------------------------\n");
+				str.append("  Line: ").append((file == null ? "unknown" : file) + ":" + line + ":" + col).append('\n');
+				str.append("  Type: ").append(error == null ? "generic" : error.getName()).append('\n');
+				
+				if(error != null) {
+					str.append("  Desc: ").append(error.getMessage() == null ? "null" : error.getMessage()).append('\n');
+				}
+				
+				if(message != null) {
+					if(error == null || error.getMessage() == null || !message.endsWith(error.getMessage())) {
+						str.append("  Desc: ").append(message).append('\n');
+					}
+				}
+				
+				str.append("----------------------------------\n\n");
+				str.append(error.getStack() == null ? "No stack trace is available" : error.getStack()).append('\n');
+				
+				showCrashScreen(str.toString());
+			}
+			
+		});
 	}
+
+	@JSFunctor
+	private static interface WindowErrorHandler extends JSObject {
+		void call(String message, String file, int line, int col, JSError error);
+	}
+	
+	@JSBody(params = { "handler" }, script = "window.addEventListener(\"error\", function(e) { handler("
+			+ "(typeof e.message === \"string\") ? e.message : null,"
+			+ "(typeof e.filename === \"string\") ? e.filename : null,"
+			+ "(typeof e.lineno === \"number\") ? e.lineno : 0,"
+			+ "(typeof e.colno === \"number\") ? e.colno : 0,"
+			+ "(typeof e.error === \"undefined\") ? null : e.error); });")
+	public static native void setWindowErrorHandler(WindowErrorHandler handler);
 
 	private static boolean isCrashed = false;
 
@@ -161,11 +202,11 @@ public class Client {
 			str.append('\n').append('\n');
 			str.append("eaglercraft.version = \"").append(ConfigConstants.version).append("\"\n");
 			str.append("eaglercraft.minecraft = \"1.5.2\"\n");
-			str.append("eaglercraft.brand = \"eagtek\"\n");
+			str.append("eaglercraft.brand = \"lax1dude\"\n");
 			str.append("eaglercraft.username = \"").append(EaglerProfile.username).append("\"\n");
 			str.append('\n');
-			//shortenMinecraftOpts();
-			//addArray(str, "minecraftOpts");
+			str.append(addWebGLToCrash());
+			str.append('\n');
 			str.append(crashScreenOptsDump).append('\n');
 			str.append('\n');
 			addDebugNav(str, "userAgent");
@@ -187,8 +228,6 @@ public class Client {
 			addDebugScreen(str, "availHeight");
 			addDebugScreen(str, "colorDepth");
 			addDebugScreen(str, "pixelDepth");
-			str.append('\n');
-			addDebug(str, "currentContext");
 			str.append('\n');
 			addDebugLocation(str, "href");
 			str.append("\n----- Begin Minecraft Config -----\n");
@@ -213,6 +252,39 @@ public class Client {
 		}
 	}
 
+	private static String addWebGLToCrash() {
+		StringBuilder ret = new StringBuilder();
+		
+		WebGLRenderingContext ctx = EaglerAdapterImpl2.webgl;
+		
+		if(ctx == null) {
+			HTMLCanvasElement cvs = (HTMLCanvasElement) Window.current().getDocument().createElement("canvas");
+			
+			cvs.setWidth(64);
+			cvs.setHeight(64);
+			
+			ctx = (WebGLRenderingContext)cvs.getContext("webgl");
+		}
+		
+		if(ctx != null) {
+			if(EaglerAdapterImpl2.webgl != null) {
+				ret.append("webgl.version = ").append(ctx.getParameterString(VERSION)).append('\n');
+			}
+			if(ctx.getExtension("WEBGL_debug_renderer_info") != null) {
+				ret.append("webgl.renderer = ").append(ctx.getParameterString(/* UNMASKED_RENDERER_WEBGL */ 0x9246)).append('\n');
+				ret.append("webgl.vendor = ").append(ctx.getParameterString(/* UNMASKED_VENDOR_WEBGL */ 0x9245)).append('\n');
+			}else {
+				ret.append("webgl.renderer = ").append("" + ctx.getParameterString(RENDERER) + " [masked]").append('\n');
+				ret.append("webgl.vendor = ").append("" + ctx.getParameterString(VENDOR) + " [masked]").append('\n');
+			}
+			ret.append("\nwebgl.anisotropicGlitch = ").append(DetectAnisotropicGlitch.hasGlitch()).append('\n');
+		}else {
+			ret.append("Failed to query GPU info!\n");
+		}
+		
+		return ret.toString();
+	}
+
 	public static void showIncompatibleScreen(String t) {
 		if(!isCrashed) {
 			isCrashed = true;
@@ -231,6 +303,7 @@ public class Client {
 					+ "<div style=\"margin-left:40px;\">"
 					+ "<p style=\"font-size:1.2em;\"><b style=\"font-size:1.1em;\">Issue:</b> <span style=\"color:#BB0000;\" id=\"crashReason\"></span><br /></p>"
 					+ "<p style=\"margin-left:10px;font:0.9em monospace;\" id=\"crashUserAgent\"></p>"
+					+ "<p style=\"margin-left:10px;font:0.9em monospace;\" id=\"crashWebGL\"></p>"
 					+ "<p><br /><span style=\"font-size:1.1em;border-bottom:1px dashed #AAAAAA;padding-bottom:5px;\">Things you can try:</span></p>"
 					+ "<ol>"
 					+ "<li><span style=\"font-weight:bold;\">Just try using Eaglercraft on a different device</span>, it isn't a bug it's common sense</li>"
@@ -247,6 +320,35 @@ public class Client {
 			div.querySelector("#crashUserAgent").appendChild(doc.createTextNode(getStringNav("userAgent")));
 			
 			EaglerAdapterImpl2.removeEventHandlers();
+			
+			String webGLRenderer = "No GL_RENDERER string could be queried";
+			
+			try {
+				HTMLCanvasElement cvs = (HTMLCanvasElement) Window.current().getDocument().createElement("canvas");
+				
+				cvs.setWidth(64);
+				cvs.setHeight(64);
+				
+				WebGLRenderingContext ctx = (WebGLRenderingContext)cvs.getContext("webgl");
+				
+				if(ctx != null) {
+					String r;
+					if(ctx.getExtension("WEBGL_debug_renderer_info") != null) {
+						r = ctx.getParameterString(/* UNMASKED_RENDERER_WEBGL */ 0x9246);
+					}else {
+						r = ctx.getParameterString(RENDERER);
+						if(r != null) {
+							r += " [masked]";
+						}
+					}
+					if(r != null) {
+						webGLRenderer = r;
+					}
+				}
+			}catch(Throwable tt) {
+			}
+			
+			div.querySelector("#crashWebGL").appendChild(doc.createTextNode(webGLRenderer));
 			
 		}
 	}

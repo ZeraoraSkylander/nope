@@ -8,7 +8,7 @@
 
 ### Note: we will be transitioning away from Eaglercraft being standalone 'free browser minecraft' to Eaglercraft being a bukkit/bungee plugin for servers to allow 'online access' to players who register with a command as their real online-mode Minecraft account on the server. Server owners can still elect to set `online-mode=false` in their server.properties to allow free login but now that's their legal screw up instead of mine
 
-![eaglercraft](https://cdn.discordapp.com/attachments/378764518081429506/964047481849643018/new_github_screenshot.png)
+![eaglercraft](https://g.deev.is/eaglercraft/cover.png)
 
 ### Official Demo URL: [https://g.deev.is/eaglercraft/](https://g.deev.is/eaglercraft/)
 
@@ -24,13 +24,9 @@
 
 Eaglercraft is real Minecraft 1.5.2 that you can play in any regular web browser. That includes school chromebooks, it works on all chromebooks. It supports both singleplayer and multiplayer.
 
-### Ayonull's server list: [https://eagler.nully.tech/servers](https://eagler.nully.tech/servers)
-
-### Ayonull's FAQ site: [https://eagler.nully.tech/](https://eagler.nully.tech/)
-
 ## Singleplayer?
 
-### Eaglercraft now fully supports singleplayer!
+### Eaglercraft now fully supports singleplayer
 
 ### Simply press the 'Singleplayer' button on the main menu and you can create a regular vanilla minecraft and play it any time.
 

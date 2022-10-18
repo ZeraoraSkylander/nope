@@ -493,13 +493,13 @@ public class EaglerAdapterImpl2 {
 	public static final void removeEventHandlers() {
 		try {
 			win.removeEventListener("contextmenu", contextmenu);
-			win.removeEventListener("mousedown", mousedown);
-			win.removeEventListener("mouseup", mouseup);
-			win.removeEventListener("mousemove", mousemove);
+			canvas.removeEventListener("mousedown", mousedown);
+			canvas.removeEventListener("mouseup", mouseup);
+			canvas.removeEventListener("mousemove", mousemove);
 			win.removeEventListener("keydown", keydown);
 			win.removeEventListener("keyup", keyup);
 			win.removeEventListener("keypress", keypress);
-			win.removeEventListener("wheel", wheel);
+			canvas.removeEventListener("wheel", wheel);
 		}catch(Throwable t) {
 		}
 		try {
@@ -1032,7 +1032,7 @@ public class EaglerAdapterImpl2 {
 		return getNavString("platform").toLowerCase().contains("win");
 	}
 	public static final boolean glNeedsAnisotropicFix() {
-		return anisotropicFilteringSupported && DetectAnisotropicGlitch.detectGlitch();
+		return anisotropicFilteringSupported && DetectAnisotropicGlitch.hasGlitch();
 	}
 
 	private static HTMLCanvasElement imageLoadCanvas = null;
@@ -1076,13 +1076,15 @@ public class EaglerAdapterImpl2 {
 				Uint8ClampedArray pxls = pxlsDat.getData();
 				int totalPixels = pxlsDat.getWidth() * pxlsDat.getHeight();
 				freeDataURL(toLoad.getSrc());
-				if(pxls.getByteLength() < totalPixels * 4) {
+				if(pxls.getByteLength() < totalPixels << 2) {
 					ret.complete(null);
 					return;
 				}
+				DataView dv = DataView.create(pxls.getBuffer());
 				int[] pixels = new int[totalPixels];
-				for(int i = 0; i < pixels.length; ++i) {
-					pixels[i] = (pxls.get(i * 4) << 16) | (pxls.get(i * 4 + 1) << 8) | pxls.get(i * 4 + 2) | (pxls.get(i * 4 + 3) << 24);
+				for(int i = 0, j; i < pixels.length; ++i) {
+					j = dv.getUint32(i << 2, false);
+					pixels[i] = (j >> 8) | ((j & 0xFF) << 24);
 				}
 				ret.complete(new EaglerImage(pixels, pxlsDat.getWidth(), pxlsDat.getHeight(), true));
 			}
@@ -1934,22 +1936,29 @@ public class EaglerAdapterImpl2 {
 		}
 	}
 	public static final byte[] loadLocalStorage(String key) {
-		Storage strg = win.getLocalStorage();
-		if(strg != null) {
-			String s = strg.getItem("_eaglercraft."+key);
-			if(s != null) {
-				return Base64.decodeBase64(s);
+		try {
+			Storage strg = win.getLocalStorage();
+			if(strg != null) {
+				String s = strg.getItem("_eaglercraft."+key);
+				if(s != null) {
+					return Base64.decodeBase64(s);
+				}else {
+					return null;
+				}
 			}else {
 				return null;
 			}
-		}else {
+		}catch(Throwable t) {
 			return null;
 		}
 	}
 	public static final void saveLocalStorage(String key, byte[] data) {
-		Storage strg = win.getLocalStorage();
-		if(strg != null) {
-			strg.setItem("_eaglercraft."+key, Base64.encodeBase64String(data));
+		try {
+			Storage strg = win.getLocalStorage();
+			if(strg != null) {
+				strg.setItem("_eaglercraft."+key, Base64.encodeBase64String(data));
+			}
+		}catch(Throwable t) {
 		}
 	}
 	public static final void openLink(String url) {
